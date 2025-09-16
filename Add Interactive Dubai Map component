@@ -1,0 +1,384 @@
+import React, { useState, useMemo } from "react";
+import "leaflet/dist/leaflet.css";
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup, LayersControl, FeatureGroup } from "react-leaflet";
+import L from "leaflet";
+
+// NOTE: This is a single-file React component (default export) that uses react-leaflet + OpenStreetMap tiles.
+// It contains approximate GeoJSON polygons and polylines for major Dubai master communities and highways,
+// plus sample markers for recent & upcoming launches. The geographic shapes are approximate and meant
+// for visual reference only. Replace or refine GeoJSON coordinates with official shapefiles/GeoJSON when available.
+
+// Simple custom icon for project markers
+const projectIcon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  iconSize: [25, 41],
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
+export default function InteractiveDubaiMap() {
+  // map center (Dubai) and zoom
+  const center = [25.2048, 55.2708];
+
+  // --- Approximate GeoJSON for master communities (very rough polygons / bounding boxes) ---
+  const masterCommunities = useMemo(() => ({
+    type: "FeatureCollection",
+    features: [
+      // Downtown Dubai (around Burj Khalifa)
+      {
+        type: "Feature",
+        properties: { name: "Downtown Dubai", developer: "Emaar" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [55.2670, 25.2060],
+              [55.2800, 25.2060],
+              [55.2800, 25.1950],
+              [55.2670, 25.1950],
+              [55.2670, 25.2060],
+            ],
+          ],
+        },
+      },
+
+      // Dubai Marina (approx bounding box)
+      {
+        type: "Feature",
+        properties: { name: "Dubai Marina", developer: "Emaar / private" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [55.120, 25.100],
+              [55.155, 25.100],
+              [55.155, 25.065],
+              [55.120, 25.065],
+              [55.120, 25.100],
+            ],
+          ],
+        },
+      },
+
+      // Palm Jumeirah (approx polygon - rough oval around trunk)
+      {
+        type: "Feature",
+        properties: { name: "Palm Jumeirah", developer: "Nakheel" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [55.1185, 25.1300],
+              [55.1220, 25.1350],
+              [55.1350, 25.1330],
+              [55.1480, 25.1285],
+              [55.1500, 25.1230],
+              [55.1450, 25.1170],
+              [55.1350, 25.1150],
+              [55.1250, 25.1165],
+              [55.1185, 25.1300],
+            ],
+          ],
+        },
+      },
+
+      // Dubai Hills Estate (rough box)
+      {
+        type: "Feature",
+        properties: { name: "Dubai Hills", developer: "Emaar" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [55.190, 25.056],
+              [55.245, 25.056],
+              [55.245, 25.020],
+              [55.190, 25.020],
+              [55.190, 25.056],
+            ],
+          ],
+        },
+      },
+
+      // MBR City (Mohammed Bin Rashid City) - very rough
+      {
+        type: "Feature",
+        properties: { name: "MBR City", developer: "Various / MBR" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [55.250, 25.150],
+              [55.320, 25.150],
+              [55.320, 25.090],
+              [55.250, 25.090],
+              [55.250, 25.150],
+            ],
+          ],
+        },
+      },
+
+      // Dubai Creek Harbour (rough)
+      {
+        type: "Feature",
+        properties: { name: "Dubai Creek Harbour", developer: "Emaar & Dubai Holding" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [55.350, 25.270],
+              [55.385, 25.270],
+              [55.385, 25.230],
+              [55.350, 25.230],
+              [55.350, 25.270],
+            ],
+          ],
+        },
+      },
+
+      // Dubai South (approx near Al Maktoum Intl)
+      {
+        type: "Feature",
+        properties: { name: "Dubai South", developer: "Dubai South" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [55.250, 24.900],
+              [55.450, 24.900],
+              [55.450, 24.750],
+              [55.250, 24.750],
+              [55.250, 24.900],
+            ],
+          ],
+        },
+      },
+
+      // Jumeirah Beach Residence (JBR)
+      {
+        type: "Feature",
+        properties: { name: "Jumeirah Beach Residence (JBR)", developer: "Dubai Properties" },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [55.130, 25.080],
+              [55.140, 25.080],
+              [55.140, 25.070],
+              [55.130, 25.070],
+              [55.130, 25.080],
+            ],
+          ],
+        },
+      },
+    ],
+  }));
+
+  // --- Approximate polylines for major highways ---
+  const highways = useMemo(() => ({
+    type: "FeatureCollection",
+    features: [
+      // Sheikh Zayed Road (E11) - simplified polyline along coast through Dubai
+      {
+        type: "Feature",
+        properties: { name: "Sheikh Zayed Road (E11)" },
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [55.290, 25.265],
+            [55.270, 25.250],
+            [55.240, 25.230],
+            [55.210, 25.210],
+            [55.180, 25.190],
+            [55.150, 25.170],
+            [55.120, 25.150],
+          ],
+        },
+      },
+
+      // Sheikh Mohammed bin Zayed Road (E311) - outer ring
+      {
+        type: "Feature",
+        properties: { name: "Sheikh Mohammed Bin Zayed Road (E311)" },
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [55.500, 25.300],
+            [55.450, 25.270],
+            [55.410, 25.230],
+            [55.360, 25.180],
+            [55.320, 25.140],
+            [55.280, 25.100],
+          ],
+        },
+      },
+
+      // Al Khail Road (E44)
+      {
+        type: "Feature",
+        properties: { name: "Al Khail Road (E44)" },
+        geometry: {
+          type: "LineString",
+          coordinates: [
+            [55.300, 25.200],
+            [55.260, 25.170],
+            [55.220, 25.140],
+            [55.190, 25.115],
+            [55.160, 25.090],
+          ],
+        },
+      },
+    ],
+  }));
+
+  // --- Sample recent & upcoming project markers (approx coords, replace with exact lat/lng if available) ---
+  const projects = useMemo(
+    () => [
+      {
+        id: 1,
+        name: "Hayat, Dubai South",
+        developer: "Dubai South",
+        status: "Upcoming / Launched",
+        coords: [24.935, 55.036],
+        notes: "Wellness‑inspired master phase near Al Maktoum Intl Airport",
+        category: "master",
+      },
+      {
+        id: 2,
+        name: "The Oasis - Dubai Hills Villas",
+        developer: "Emaar",
+        status: "Upcoming",
+        coords: [25.040, 55.215],
+        notes: "Luxury villa phase",
+        category: "master",
+      },
+      {
+        id: 3,
+        name: "Elle Residences - Dubai Islands",
+        developer: "Anax / Elle",
+        status: "Recent Launch",
+        coords: [25.250, 55.210],
+        notes: "Waterfront tower on Dubai Islands",
+        category: "tower",
+      },
+      {
+        id: 4,
+        name: "Ciel Dubai Marina (Hotel)",
+        developer: "The First Group",
+        status: "Under Construction",
+        coords: [25.078, 55.131],
+        notes: "World’s tallest hotel‑only building (hotel floors) - Marina skyline",
+        category: "tower",
+      },
+      {
+        id: 5,
+        name: "Bugatti Residences (Business Bay)",
+        developer: "Binghatti",
+        status: "Launched",
+        coords: [25.197, 55.274],
+        notes: "Luxury branded residences close to Downtown",
+        category: "tower",
+      },
+    ],
+    []
+  );
+
+  // UI state for filters
+  const [showCommunities, setShowCommunities] = useState(true);
+  const [showHighways, setShowHighways] = useState(true);
+  const [showProjects, setShowProjects] = useState(true);
+  const [projectFilter, setProjectFilter] = useState("all"); // all / upcoming / recent
+
+  const filteredProjects = projects.filter((p) => {
+    if (projectFilter === "all") return true;
+    if (projectFilter === "upcoming") return p.status.toLowerCase().includes("upcoming");
+    if (projectFilter === "recent") return p.status.toLowerCase().includes("launched") || p.status.toLowerCase().includes("under");
+    return true;
+  });
+
+  // style functions
+  const communityStyle = (feature) => ({
+    color: "#1E40AF",
+    weight: 2,
+    fillColor: "#93C5FD",
+    fillOpacity: 0.2,
+  });
+
+  const highwayStyle = (feature) => ({
+    color: "#DC2626",
+    weight: 3,
+    dashArray: "6",
+  });
+
+  return (
+    <div className="w-full h-screen flex flex-col">
+      <div className="p-3 bg-white shadow-md z-50">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <h1 className="text-lg font-semibold">Interactive Dubai Map — Master Communities, Highways & Launches</h1>
+          <div className="flex gap-3 items-center">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={showCommunities} onChange={(e) => setShowCommunities(e.target.checked)} /> Show communities</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={showHighways} onChange={(e) => setShowHighways(e.target.checked)} /> Show highways</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={showProjects} onChange={(e) => setShowProjects(e.target.checked)} /> Show projects</label>
+            <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="border rounded p-1">
+              <option value="all">All projects</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="recent">Recent / Under construction</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1">
+        <MapContainer center={center} zoom={11} style={{ height: "100%", width: "100%" }}>
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+
+          {/* Communities layer */}
+          {showCommunities && (
+            <GeoJSON data={masterCommunities} style={communityStyle} onEachFeature={(feature, layer) => {
+              const name = feature.properties?.name || "";
+              const dev = feature.properties?.developer || "";
+              layer.bindPopup(`<strong>${name}</strong><br/>Developer: ${dev}`);
+            }} />
+          )}
+
+          {/* Highways layer */}
+          {showHighways && (
+            <GeoJSON data={highways} style={highwayStyle} onEachFeature={(feature, layer) => {
+              layer.bindPopup(`<strong>${feature.properties?.name}</strong>`);
+            }} />
+          )}
+
+          {/* Projects */}
+          {showProjects && (
+            <FeatureGroup>
+              {filteredProjects.map((p) => (
+                <Marker key={p.id} position={p.coords} icon={projectIcon}>
+                  <Popup>
+                    <div className="text-sm">
+                      <strong>{p.name}</strong>
+                      <div>Developer: {p.developer}</div>
+                      <div>Status: {p.status}</div>
+                      <div style={{ marginTop: 6 }}>{p.notes}</div>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+            </FeatureGroup>
+          )}
+        </MapContainer>
+      </div>
+
+      <footer className="p-2 bg-white text-xs text-gray-600">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:justify-between">
+          <div>Data: approximate sample data for visualization only. Replace GeoJSON with authoritative shapefiles for production use.</div>
+          <div>Tips: click polygons/lines/markers to see info. Use the checkboxes and filter to refine view.</div>
+        </div>
+      </footer>
+    </div>
+  );
+}
